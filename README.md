@@ -60,6 +60,33 @@ pip install torch==1.7.1 torchvision==0.8.2
 pip install numpy matplotlib opencv-python scikit-learn
 
 
+# Hyperparameter search configuration (configs/hparams_search.yml)
+hyperparameters:
+  learning_rate:
+    min: 1e-4
+    max: 1e-1
+    log_scale: true
+  dropout:
+    values: [0.1, 0.2, 0.3, 0.5]
+  batch_size:
+    values: [16, 32, 64]
+  optimizer:
+    values: ["sgd", "adamw", "radam"]
+
+Learning Rate Optimization:
+  Conduct logarithmic sweeps (1e-1 to 1e-4)
+  Use 5-epoch warmup followed by cosine annealing
+  Final selection: LR=0.1 (initial), decaying to 1e-4
+Dropout Rate Selection:
+  Tested values: [0.1, 0.2, 0.3, 0.5]
+  Evaluated via 5-fold cross-validation
+  Optimal: 0.2 (minimal overfitting)
+Batch Size Calibration:
+  Tested sizes: [16, 32, 64]
+  32 provides best memory/accuracy balance
+  Gradient accumulation steps=2 when using batch size 16
+
+
 🚀 Getting Started
 
 Data Preparation
@@ -89,6 +116,61 @@ Run the following command to perform testing:
 
 python test.py --model-path ./checkpoints/best_model.pth --dataset bdd100k
 
+
+⚙️ Training Protocol
+Our optimized training pipeline:
+
+Data Augmentation
+from torchvision import transforms
+
+train_transform = transforms.Compose([
+    transforms.RandomResizedCrop(512),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2),
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                         std=[0.229, 0.224, 0.225])
+])
+
+Optimization Schedule
+Phase	Epochs	Optimizer	Parameters
+Initial	1-30	SGD	lr=0.1, momentum=0.9
+Mid-training	31-100	AdamW	lr=1e-3, weight_decay=1e-4
+Fine-tuning	101-150	RAdam	lr=1e-4, gradient_clip=1.0
+
+Execution Command
+python train.py \
+  --dataset BDD114K \
+  --batch_size 32 \
+  --dropout 0.2 \
+  --lr_schedule cosine \
+  --max_epochs 150 \
+  --data_dir ./data/bdd114k
+📊 Expected Results
+Reproduction variance should be ≤0.3% from reported metrics:
+
+Dataset	Accuracy	95% CI	Expected Range
+BDD114k	93.41%	(93.27-93.55)	93.1-93.7%
+Proprietary	80.41%	(79.83-80.99)	80.1-80.7%
+
+🧪 Verification Tests
+# Run end-to-end verification
+pytest tests/ --benchmark
+
+# Validate against Table 7 metrics
+python verify_results.py --checkpoint pretrained/amcnet_bdd114k.pth
+🚀 Quick Start
+Clone repository:
+git clone https://github.com/yourname/AMCNet.git
+cd AMCNet
+Install dependencies:
+pip install -r requirements.txt
+Download datasets:
+python scripts/download_datasets.py
+Train model:
+python train.py --config configs/bdd114k.yml
+Evaluate:
+python eval.py --checkpoint outputs/model_best.pth
 
 📈 Experimental Results
 
