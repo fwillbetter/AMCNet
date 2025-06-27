@@ -4,6 +4,7 @@ AMCNet (Autonomous Multi-Resolution Fusion Classification Network) is a classifi
 📚 About AMCNet
 AMCNet is an innovative classification network designed to extract discriminative features from complex traffic scenes and establish relationships between them. The network leverages multi-resolution feature extraction, feature differentiation screening, and feature fusion classification to achieve high accuracy and robust generalization.
 
+
 🚀 Project Structure
 
 AMCNet/
